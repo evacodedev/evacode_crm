@@ -34,7 +34,33 @@ docker compose up --build
 | Логин | `sales` |
 | Пароль | `sales123` (или `DEMO_SALES_PASSWORD` из `.env`) |
 
-При старте API: migrate + `seed_demo` (категории, товары, группа «Частые позиции»).
+При старте API: migrate + `seed_demo` (категории, товары, группа «Частые позиции»).  
+`seed_demo` каждый раз выставляет пароль из `DEMO_SALES_PASSWORD` (по умолчанию `sales123`).
+
+### Если «не заходит»
+
+1. Docker Desktop запущен; в каталоге репо есть файл `.env` (`copy .env.example .env`).
+2. Открывай именно http://127.0.0.1:43123 (не другой порт / не `file://`).
+3. Проверки в PowerShell из `C:\work\site\evacodeCRM`:
+
+```powershell
+docker compose ps
+docker compose logs api --tail 80
+# Должно быть: Seed OK. User sales / sales123
+curl.exe -s -X POST http://127.0.0.1:8000/api/auth/login/ -H "Content-Type: application/json" -d "{\"username\":\"sales\",\"password\":\"sales123\"}"
+```
+
+Ожидаемый ответ API — JSON с `"token": "..."`. Если так, а в браузере нет — обнови страницу с очисткой кэша (Ctrl+F5) или другой браузер.
+
+Пересоздать пользователя и подтянуть фикс прокси:
+
+```powershell
+git pull
+docker compose down
+docker compose up --build
+# или только seed:
+docker compose exec api python manage.py seed_demo
+```
 
 ---
 
