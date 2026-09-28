@@ -1,9 +1,10 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 
 const router = useRouter()
+const route = useRoute()
 const loading = ref(true)
 const submitting = ref(false)
 const error = ref('')
@@ -115,13 +116,26 @@ async function submitOrder() {
   }
 }
 
+watch(
+  () => route.query,
+  (q) => {
+    if (typeof q.q === 'string') search.value = q.q
+    if (typeof q.client === 'string' && q.client && !form.value.client_name) {
+      form.value.client_name = q.client
+    }
+  },
+  { immediate: true },
+)
+
 onMounted(load)
 </script>
 
 <template>
   <div>
-    <h1>Новый заказ</h1>
-    <p class="muted">Реквизиты клиента, адрес доставки и подбор товаров из ваших групп.</p>
+    <header class="page-head">
+      <h1>Новый заказ</h1>
+      <p class="muted">Реквизиты клиента, адрес доставки и подбор товаров из ваших групп.</p>
+    </header>
 
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="success" class="ok">{{ success }}</p>
@@ -132,21 +146,21 @@ onMounted(load)
         <section class="panel stack">
           <h2>Клиент</h2>
           <label>ФИО <input v-model="form.client_name" required /></label>
-          <div class="row" style="align-items: stretch">
-            <label style="flex: 1">Телефон <input v-model="form.client_phone" required /></label>
-            <label style="flex: 1">Email <input v-model="form.client_email" type="email" /></label>
+          <div class="row">
+            <label class="grow">Телефон <input v-model="form.client_phone" required /></label>
+            <label class="grow">Email <input v-model="form.client_email" type="email" /></label>
           </div>
           <label>Комментарий <textarea v-model="form.client_note" /></label>
         </section>
 
         <section class="panel stack">
           <h2>Адрес доставки</h2>
-          <div class="row" style="align-items: stretch">
-            <label style="flex: 1">Страна <input v-model="form.delivery_country" /></label>
-            <label style="flex: 1">Город <input v-model="form.delivery_city" required /></label>
+          <div class="row">
+            <label class="grow">Страна <input v-model="form.delivery_country" /></label>
+            <label class="grow">Город <input v-model="form.delivery_city" required /></label>
           </div>
           <label>Улица, дом, квартира <input v-model="form.delivery_street" required /></label>
-          <label>Индекс <input v-model="form.delivery_postal" style="max-width: 180px" /></label>
+          <label class="grow" style="max-width: 220px">Индекс <input v-model="form.delivery_postal" /></label>
         </section>
 
         <section class="panel">

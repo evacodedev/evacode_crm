@@ -1,6 +1,9 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { api } from '../api'
+
+const route = useRoute()
 
 const orders = ref([])
 const loading = ref(true)
@@ -28,6 +31,14 @@ function syncLabel(s) {
   return map[s] || s
 }
 
+const visibleOrders = computed(() => {
+  const q = String(route.query.q || '').trim().toLowerCase()
+  if (!q) return orders.value
+  return orders.value.filter((o) =>
+    `${o.client_name} ${o.client_phone} ${o.id} ${o.delivery_city}`.toLowerCase().includes(q),
+  )
+})
+
 async function load() {
   loading.value = true
   error.value = ''
@@ -48,45 +59,48 @@ async function openOrder(id) {
   }
 }
 
-onMounted(load)
+onMounted(async () => {
+  await load()
+  if (route.query.open) openOrder(route.query.open)
+})
+
+watch(
+  () => route.query.open,
+  (id) => {
+    if (id) openOrder(id)
+  },
+)
 </script>
 
 <template>
   <div>
-    <h1>Мои заказы</h1>
-    <p class="muted">Заказы, оформленные вами в этом рабочем месте.</p>
+    <header class="page-head">
+      <h1>Мои заказы</h1>
+      <p class="muted">Заказы, оформленные вами в этом рабочем месте.</p>
+    </header>
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="loading" class="muted">Загрузка…</p>
 
     <section v-else class="panel">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>№</th>
-            <th>Клиент</th>
-            <th>Сумма</th>
-            <th>Статус</th>
-            <th>Business.Ru</th>
-            <th>Дата</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="o in orders"
-            :key="o.id"
-            style="cursor: pointer"
-            @click="openOrder(o.id)"
-          >
-            <td>{{ o.id }}</td>
-            <td>{{ o.client_name }}</td>
-            <td>{{ money(o.total_amount) }}</td>
-            <td>{{ statusLabel(o.status) }}</td>
-            <td>{{ syncLabel(o.business_ru_sync_status) }}</td>
-            <td>{{ new Date(o.created_at).toLocaleString('ru-RU') }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <p v-if="!orders.length" class="muted">Пока нет заказов.</p>
+      <div class="order-list">
+        <button
+          v-for="o in visibleOrders"
+          :key="o.id"
+          type="button"
+          class="order-card"
+          :class="{ 'is-open': selected?.id === o.id }"
+          @click="openOrder(o.id)"
+        >
+          <span>
+            <strong>№{{ o.id }} · {{ o.client_name }}</strong>
+            <span class="muted">{{ new Date(o.created_at).toLocaleString('ru-RU') }}</span>
+          </span>
+          <span class="muted">{{ statusLabel(o.status) }}</span>
+          <span class="muted">{{ syncLabel(o.business_ru_sync_status) }}</span>
+          <span class="price">{{ money(o.total_amount) }}</span>
+        </button>
+      </div>
+      <p v-if="!visibleOrders.length" class="muted">Пока нет заказов.</p>
     </section>
 
     <section v-if="selected" class="panel" style="margin-top: 1rem">

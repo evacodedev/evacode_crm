@@ -1,6 +1,9 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { api } from '../api'
+
+const route = useRoute()
 
 const groups = ref([])
 const products = ref([])
@@ -77,6 +80,12 @@ async function removeGroup(id) {
   }
 }
 
+const visibleGroups = computed(() => {
+  const q = String(route.query.q || '').trim().toLowerCase()
+  if (!q) return groups.value
+  return groups.value.filter((g) => g.name.toLowerCase().includes(q))
+})
+
 function toggleProduct(id) {
   if (selectedIds.value.includes(id)) {
     selectedIds.value = selectedIds.value.filter((x) => x !== id)
@@ -90,8 +99,10 @@ onMounted(load)
 
 <template>
   <div>
-    <h1>Мои группы</h1>
-    <p class="muted">Соберите свою панель групп товаров — она появится в форме заказа.</p>
+    <header class="page-head">
+      <h1>Мои группы</h1>
+      <p class="muted">Соберите свою панель групп товаров — она появится в форме заказа.</p>
+    </header>
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="message" class="ok">{{ message }}</p>
 
@@ -105,7 +116,7 @@ onMounted(load)
 
     <p v-if="loading" class="muted">Загрузка…</p>
 
-    <section v-for="g in groups" :key="g.id" class="panel" style="margin-top: 1rem">
+    <section v-for="g in visibleGroups" :key="g.id" class="panel" style="margin-top: 1rem">
       <div class="row" style="justify-content: space-between">
         <h2 style="margin: 0">{{ g.name }}</h2>
         <div class="row">
@@ -123,7 +134,7 @@ onMounted(load)
 
       <div v-if="editingId === g.id" class="stack" style="margin-top: 1rem">
         <h3>Выберите товары</h3>
-        <label v-for="p in products" :key="p.id" style="flex-direction: row; align-items: center; gap: 0.5rem">
+        <label v-for="p in products" :key="p.id" class="check-row">
           <input
             type="checkbox"
             :checked="selectedIds.includes(p.id)"
